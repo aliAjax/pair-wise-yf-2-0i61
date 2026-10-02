@@ -1,9 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapPin, List, Trophy, Plus, TreeDeciduous } from 'lucide-react';
+import { MapPin, List, Trophy, Plus, TreeDeciduous, Archive } from 'lucide-react';
+import { useState } from 'react';
+import ArchiveManager from '@/components/ArchiveManager/ArchiveManager';
+import { useBenchStore } from '@/store/useBenchStore';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const pendingCount = useBenchStore((s) => s.benches.filter((b) => b.pendingReview).length);
 
   const navItems = [
     { path: '/', icon: List, label: '列表' },
@@ -52,15 +57,33 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <button
-            onClick={() => navigate('/add')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-ochre text-white rounded-lg font-medium text-sm hover:bg-ochre-light transition-colors shadow-md hover:shadow-lg"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">添加长椅</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setArchiveOpen(true)}
+              className="relative flex items-center gap-1.5 px-3 py-2 text-ink-light hover:bg-deep-brown/5 hover:text-deep-brown rounded-lg transition-colors"
+              title="导出 / 导入合并档案"
+            >
+              <Archive className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">档案</span>
+              {pendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-ochre text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => navigate('/add')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-ochre text-white rounded-lg font-medium text-sm hover:bg-ochre-light transition-colors shadow-md hover:shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">添加长椅</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <ArchiveManager open={archiveOpen} onClose={() => setArchiveOpen(false)} />
     </header>
   );
 }

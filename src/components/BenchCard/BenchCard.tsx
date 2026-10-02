@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Volume2, Sun, Armchair } from 'lucide-react';
+import { MapPin, Clock, Volume2, Sun, Armchair, AlertTriangle, ShieldQuestion } from 'lucide-react';
 import type { Bench } from '@/types';
 import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS } from '@/types';
 import Rating from '@/components/Rating/Rating';
@@ -29,14 +29,28 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
             <Armchair className="w-10 h-10 text-moss-green/50" />
           </div>
         </div>
-        
+
         <div className="absolute top-3 right-3 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs font-medium">
           <span className={comfortColor}>{comfortLevel}</span>
           <span className="text-ink-light ml-1">{comfortScore}</span>
         </div>
 
-        <div className="absolute top-3 left-3 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs text-ink-light">
-          {MATERIAL_LABELS[bench.material]}
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs text-ink-light">
+            {MATERIAL_LABELS[bench.material]}
+          </div>
+          {bench.pendingReview && (
+            <div className="px-2 py-1 bg-ochre/90 backdrop-blur-sm rounded-full text-xs text-white flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              待复核
+            </div>
+          )}
+          {!bench.experiencesConfirmed && (
+            <div className="px-2 py-1 bg-deep-brown/80 backdrop-blur-sm rounded-full text-xs text-warm-cream flex items-center gap-1">
+              <ShieldQuestion className="w-3 h-3" />
+              体验待确认
+            </div>
+          )}
         </div>
       </div>
 

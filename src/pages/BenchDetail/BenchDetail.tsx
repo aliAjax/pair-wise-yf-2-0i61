@@ -23,15 +23,50 @@ import {
   NOISE_LABELS,
   STAY_DURATION_LABELS,
   TIME_PERIOD_LABELS,
+  CONFLICT_REASON_LABELS,
 } from '@/types';
-import type { TimePeriodType } from '@/types';
+import type { TimePeriodType, Bench } from '@/types';
 import Rating from '@/components/Rating/Rating';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
+import { GitCompare, ShieldQuestion, CheckCircle2 } from 'lucide-react';
+
+/** 两边都修改过时，列出存在差异的字段 */
+function diffFields(current: Bench, other: Bench): { label: string; current: string; other: string }[] {
+  const fields: { key: keyof Bench; label: string; format?: (v: unknown) => string }[] = [
+    { key: 'name', label: '名称' },
+    { key: 'location', label: '位置' },
+    { key: 'material', label: '材质', format: (v) => MATERIAL_LABELS[v as Bench['material']] },
+    { key: 'orientation', label: '朝向', format: (v) => ORIENTATION_LABELS[v as Bench['orientation']] },
+    { key: 'shadeLevel', label: '遮阴', format: (v) => SHADE_LABELS[v as Bench['shadeLevel']] },
+    { key: 'noiseLevel', label: '噪音', format: (v) => NOISE_LABELS[v as Bench['noiseLevel']] },
+    { key: 'stayDuration', label: '停留时长', format: (v) => STAY_DURATION_LABELS[v as Bench['stayDuration']] },
+    { key: 'hasBackrest', label: '靠背', format: (v) => (v ? '有' : '无') },
+    { key: 'rating', label: '评分', format: (v) => `${v} 星` },
+    { key: 'review', label: '评价' },
+  ];
+  const diffs: { label: string; current: string; other: string }[] = [];
+  for (const f of fields) {
+    const cv = current[f.key];
+    const ov = other[f.key];
+    if (cv !== ov) {
+      const fmt = f.format ?? ((v: unknown) => (v === '' || v == null ? '（空）' : String(v)));
+      diffs.push({ label: f.label, current: fmt(cv), other: fmt(ov) });
+    }
+  }
+  if (current.experiences.length !== other.experiences.length) {
+    diffs.push({
+      label: '时段体验',
+      current: `${current.experiences.length} 条`,
+      other: `${other.experiences.length} 条`,
+    });
+  }
+  return diffs;
+}
 
 export default function BenchDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getBenchById, deleteBench, initialize, initialized } = useBenchStore();
+  const { getBenchById, deleteBench, initialize, initialized, resolveConflict, confirmExperiences } = useBenchStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -94,6 +129,88 @@ export default function BenchDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {bench.pendingReview && bench.conflict && (
+            <div className="paper-texture rounded-xl shadow-paper p-5 border-l-4 border-ochre fade-in opacity-0 stagger-1">
+              <div className="flex items-start gap-3 mb-3">
+                <GitCompare className="w-5 h-5 text-ochre flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-serif font-semibold text-deep-brown">合并冲突待复核</h3>
+                  <p className="text-sm text-ink-light mt-0.5">
+                    {CONFLICT_REASON_LABELS[bench.conflict.reason]}
+                    ，当前保留了较晚更新的版本，请核对后处理。
+                  </p>
+                </div>
+              </div>
+
+              {bench.conflict.reason === 'both-modified' && bench.conflict.otherVersion && (
+                <div className="mb-4 overflow-hidden rounded-lg border border-deep-brown/10">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-warm-cream/70 text-deep-brown">
+                        <th className="text-left px-3 py-2 font-medium">字段</th>
+                        <th className="text-left px-3 py-2 font-medium">当前版本（较晚）</th>
+                        <th className="text-left px-3 py-2 font-medium">对方版本</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diffFields(bench, bench.conflict.otherVersion).map((diff) => (
+                        <tr key={diff.label} className="border-t border-deep-brown/5">
+                          <td className="px-3 py-2 text-ink-light">{diff.label}</td>
+                          <td className="px-3 py-2 text-deep-brown">{diff.current}</td>
+                          <td className="px-3 py-2 text-ink-light">{diff.other}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {bench.conflict.reason === 'deleted-vs-modified' && (
+                <p className="text-sm text-ink-light mb-4 p-3 bg-warm-cream/60 rounded-lg">
+                  这份档案在同伴的档案中已被删除，但本地有更新记录。长椅已保留，如确认删除可点击下方"保留长椅"后再删除。
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => id && resolveConflict(id, 'current')}
+                  className="px-4 py-2 text-sm text-white bg-moss-green hover:bg-moss-light rounded-lg transition-colors"
+                >
+                  {bench.conflict.reason === 'both-modified' ? '保留当前版本' : '保留长椅'}
+                </button>
+                {bench.conflict.reason === 'both-modified' && bench.conflict.otherVersion && (
+                  <button
+                    onClick={() => id && resolveConflict(id, 'other')}
+                    className="px-4 py-2 text-sm text-deep-brown bg-warm-beige hover:bg-warm-beige/80 rounded-lg transition-colors"
+                  >
+                    采用对方版本
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!bench.experiencesConfirmed && (
+            <div className="paper-texture rounded-xl shadow-paper p-5 border-l-4 border-deep-brown/40 fade-in opacity-0 stagger-1">
+              <div className="flex items-start gap-3">
+                <ShieldQuestion className="w-5 h-5 text-deep-brown flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-serif font-semibold text-deep-brown">分时段体验待确认</h3>
+                  <p className="text-sm text-ink-light mt-0.5 mb-3">
+                    长椅的材质或遮阴发生了变化，分时段体验可能不再准确。请重新核对各时段体验备注，确认无误后这张长椅才会进入排行榜。
+                  </p>
+                  <button
+                    onClick={() => id && confirmExperiences(id)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-moss-green hover:bg-moss-light rounded-lg transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    体验已确认
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="paper-texture rounded-xl shadow-paper overflow-hidden fade-in opacity-0 stagger-1">
             <div className="h-48 bg-gradient-to-br from-warm-cream via-warm-beige to-moss-green/10 relative">
               <div className="absolute inset-0 flex items-center justify-center">

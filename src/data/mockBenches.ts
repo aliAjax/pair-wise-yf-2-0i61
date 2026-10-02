@@ -1,6 +1,7 @@
 import type { Bench } from '@/types';
+import { migrateBench } from '@/utils/migrate';
 
-export const mockBenches: Bench[] = [
+const rawMockBenches: Partial<Bench>[] = [
   {
     id: 'bench-001',
     name: '梧桐树下的老长椅',
@@ -207,3 +208,5 @@ export const mockBenches: Bench[] = [
     updatedAt: '2024-03-01T11:20:00Z',
   },
 ];
+
+export const mockBenches: Bench[] = rawMockBenches.map((b) => migrateBench(b));

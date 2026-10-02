@@ -5,12 +5,23 @@ export type NoiseLevelType = 'quiet' | 'moderate' | 'noisy';
 export type StayDurationType = 'short' | 'medium' | 'long' | 'verylong';
 export type TimePeriodType = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night';
 
+/** 档案格式版本：v1 为裸长椅数组，v2 为带版本号的档案文件（含墓碑） */
+export const DATA_VERSION = 2;
+
 export interface BenchExperience {
   id: string;
   benchId: string;
   timePeriod: TimePeriodType;
   notes: string;
   rating: number;
+}
+
+/** 合并冲突信息：记录另一边的值与冲突原因，供人工复核 */
+export interface ConflictInfo {
+  reason: 'both-modified' | 'deleted-vs-modified';
+  /** 另一边的长椅快照；删除方无快照时为 null */
+  otherVersion: Bench | null;
+  detectedAt: string;
 }
 
 export interface Bench {
@@ -30,6 +41,26 @@ export interface Bench {
   experiences: BenchExperience[];
   createdAt: string;
   updatedAt: string;
+  /** 合并后待人工复核（两边都改过 / 一边删一边改） */
+  pendingReview: boolean;
+  /** 冲突详情 */
+  conflict?: ConflictInfo;
+  /** 分时段体验是否已确认；材质或遮阴变更后需重新确认，未确认前不进排行 */
+  experiencesConfirmed: boolean;
+}
+
+/** 墓碑：记录已删除的长椅，用于合并时区分"真删除"与"这边没有" */
+export interface Tombstone {
+  id: string;
+  deletedAt: string;
+}
+
+/** 档案文件（v2 格式） */
+export interface ArchiveFile {
+  version: number;
+  exportedAt: string;
+  benches: Bench[];
+  tombstones: Tombstone[];
 }
 
 export const MATERIAL_LABELS: Record<MaterialType, string> = {
@@ -84,4 +115,9 @@ export const TIME_PERIOD_ICONS: Record<TimePeriodType, string> = {
   afternoon: 'cloud-sun',
   evening: 'sunset',
   night: 'moon',
+};
+
+export const CONFLICT_REASON_LABELS: Record<NonNullable<ConflictInfo['reason']>, string> = {
+  'both-modified': '两边都修改过这张长椅',
+  'deleted-vs-modified': '一边删除了长椅，另一边做了修改',
 };

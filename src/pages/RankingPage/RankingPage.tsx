@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, MapPin, Star, Crown, Medal, Award } from 'lucide-react';
+import { Trophy, MapPin, Star, Crown, Medal, Award, ShieldQuestion } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
 import { MATERIAL_LABELS, SHADE_LABELS } from '@/types';
@@ -16,7 +16,10 @@ export default function RankingPage() {
     }
   }, [initialized, initialize]);
 
-  const rankedBenches = [...benches]
+  const pendingCount = benches.filter((b) => !b.experiencesConfirmed).length;
+
+  const rankedBenches = benches
+    .filter((b) => b.experiencesConfirmed)
     .sort((a, b) => calculateComfortScore(b) - calculateComfortScore(a))
     .map((bench, index) => ({ bench, rank: index + 1 }));
 
@@ -44,6 +47,16 @@ export default function RankingPage() {
           综合评分最高的长椅
         </p>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="mb-4 flex items-start gap-2 px-4 py-3 bg-warm-beige/60 rounded-lg text-sm text-ink-light">
+          <ShieldQuestion className="w-4 h-4 flex-shrink-0 mt-0.5 text-deep-brown" />
+          <span>
+            有 {pendingCount} 张长椅因材质或遮阴变更，分时段体验待确认，暂不进入排行。
+            可在长椅详情页确认后恢复排行。
+          </span>
+        </div>
+      )}
 
       <div className="space-y-3">
         {rankedBenches.map(({ bench, rank }) => {
@@ -126,10 +139,12 @@ export default function RankingPage() {
             <Trophy className="w-8 h-8 text-moss-green/50" />
           </div>
           <h3 className="font-serif text-lg font-medium text-deep-brown mb-2">
-            还没有排行数据
+            {pendingCount > 0 ? '排行待体验确认' : '还没有排行数据'}
           </h3>
           <p className="text-ink-light text-sm">
-            添加一些长椅档案后，这里会显示舒适度排行榜
+            {pendingCount > 0
+              ? '待确认的长椅完成分时段体验核对后，就会出现在排行榜中'
+              : '添加一些长椅档案后，这里会显示舒适度排行榜'}
           </p>
         </div>
       )}
