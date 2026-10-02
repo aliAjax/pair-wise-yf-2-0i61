@@ -1,6 +1,7 @@
 import type { Bench } from '@/types';
+import { migrateArchive } from '@/utils/migration';
 
-export const mockBenches: Bench[] = [
+const rawBenches = [
   {
     id: 'bench-001',
     name: '梧桐树下的老长椅',
@@ -207,3 +208,6 @@ export const mockBenches: Bench[] = [
     updatedAt: '2024-03-01T11:20:00Z',
   },
 ];
+
+// 原始数据没有编号 / 确认状态等新字段，统一走迁移补全
+export const mockBenches: Bench[] = migrateArchive(rawBenches).benches;

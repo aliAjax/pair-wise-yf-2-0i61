@@ -10,6 +10,7 @@ import {
   Sunset,
   Moon,
   CloudSun,
+  AlertTriangle,
 } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import {
@@ -37,7 +38,7 @@ export default function AddEditPage() {
   const navigate = useNavigate();
   const isEdit = !!id;
 
-  const { getBenchById, addBench, updateBench, initialize, initialized, addExperience, updateExperience, deleteExperience } = useBenchStore();
+  const { getBenchById, addBench, updateBench, initialize, initialized } = useBenchStore();
   const existingBench = id ? getBenchById(id) : undefined;
 
   const [formData, setFormData] = useState({
@@ -107,15 +108,13 @@ export default function AddEditPage() {
   };
 
   const handleDeleteExperience = (expId: string) => {
+    // 编辑中只改本地表单态，保存时一次性写回
     setExperiences(experiences.filter((exp) => exp.id !== expId));
-    if (isEdit && id) {
-      deleteExperience(id, expId);
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       alert('请输入长椅名称');
       return;
@@ -126,14 +125,9 @@ export default function AddEditPage() {
     }
 
     if (isEdit && id) {
-      updateBench(id, formData);
-      experiences.forEach((exp) => {
-        const existingExp = existingBench?.experiences.find((e) => e.id === exp.id);
-        if (existingExp) {
-          updateExperience(id, exp.id, exp);
-        } else {
-          addExperience(id, exp);
-        }
+      updateBench(id, {
+        ...formData,
+        experiences: experiences.map((exp) => ({ ...exp, benchId: id })),
       });
     } else {
       addBench({
@@ -168,6 +162,16 @@ export default function AddEditPage() {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {isEdit && existingBench &&
+            (formData.material !== existingBench.material || formData.shadeLevel !== existingBench.shadeLevel) && (
+            <div className="paper-texture rounded-xl shadow-paper p-4 border border-ochre/30 bg-ochre/5 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-ochre flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-ink-light">
+                材质或遮阴发生了变化，保存后分时段体验需要重新核对确认，未确认前这张长椅不参与舒适度排行。
+              </p>
+            </div>
+          )}
+
           <div className="paper-texture rounded-xl shadow-paper p-6 fade-in opacity-0 stagger-1">
             <h2 className="font-serif text-lg font-semibold text-deep-brown mb-4">
               基本信息
@@ -399,7 +403,7 @@ export default function AddEditPage() {
 
             {experiences.length > 0 ? (
               <div className="space-y-4">
-                {experiences.map((exp, index) => {
+                {experiences.map((exp) => {
                   const TimeIcon = timePeriodIcons[exp.timePeriod];
                   return (
                     <div

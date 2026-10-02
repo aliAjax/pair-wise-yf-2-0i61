@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Volume2, Sun, Armchair } from 'lucide-react';
+import { MapPin, Clock, Volume2, Sun, Armchair, AlertTriangle } from 'lucide-react';
 import type { Bench } from '@/types';
 import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS } from '@/types';
 import Rating from '@/components/Rating/Rating';
@@ -49,6 +49,23 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
           <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="line-clamp-1">{bench.location}</span>
         </div>
+
+        {(bench.pendingReviews.length > 0 || !bench.experiencesConfirmed) && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {bench.pendingReviews.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-md bg-ochre/10 text-ochre">
+                <AlertTriangle className="w-3 h-3" />
+                {bench.pendingReviews.length} 项待复核
+              </span>
+            )}
+            {!bench.experiencesConfirmed && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-md bg-red-50 text-red-500">
+                <Clock className="w-3 h-3" />
+                体验待确认
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-3">
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-moss-green/10 text-moss-green text-xs rounded-md">

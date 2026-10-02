@@ -14,6 +14,8 @@ import {
   Sunset,
   Moon,
   CloudSun,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import {
@@ -26,12 +28,13 @@ import {
 } from '@/types';
 import type { TimePeriodType } from '@/types';
 import Rating from '@/components/Rating/Rating';
+import PendingReviewsPanel from '@/components/PendingReviews/PendingReviews';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
 
 export default function BenchDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getBenchById, deleteBench, initialize, initialized } = useBenchStore();
+  const { getBenchById, deleteBench, initialize, initialized, confirmExperiences } = useBenchStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -94,6 +97,39 @@ export default function BenchDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {!bench.experiencesConfirmed && (
+            <div className="paper-texture rounded-xl shadow-paper p-4 border border-ochre/30 bg-ochre/5 fade-in">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-ochre flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-serif text-sm font-semibold text-deep-brown mb-1">
+                    分时段体验待重新确认
+                  </h3>
+                  <p className="text-xs text-ink-light mb-3">
+                    这张长椅的材质或遮阴发生了变化，旧的分时段体验可能已不适用。确认前暂不参与舒适度排行。
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => navigate(`/edit/${bench.id}`)}
+                      className="px-3 py-1.5 text-xs font-medium text-deep-brown bg-warm-beige hover:bg-warm-beige/70 rounded-lg transition-colors"
+                    >
+                      去核对体验
+                    </button>
+                    <button
+                      onClick={() => confirmExperiences(bench.id)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-moss-green hover:bg-moss-light rounded-lg transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      体验仍然适用，确认
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <PendingReviewsPanel bench={bench} />
+
           <div className="paper-texture rounded-xl shadow-paper overflow-hidden fade-in opacity-0 stagger-1">
             <div className="h-48 bg-gradient-to-br from-warm-cream via-warm-beige to-moss-green/10 relative">
               <div className="absolute inset-0 flex items-center justify-center">
@@ -215,9 +251,17 @@ export default function BenchDetail() {
 
         <div className="space-y-6">
           <div className="paper-texture rounded-xl shadow-paper p-6 fade-in opacity-0 stagger-2">
-            <h2 className="font-serif text-lg font-semibold text-deep-brown mb-4">
-              分时段体验
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="font-serif text-lg font-semibold text-deep-brown">
+                分时段体验
+              </h2>
+              {!bench.experiencesConfirmed && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-red-50 text-red-500">
+                  <AlertTriangle className="w-3 h-3" />
+                  待重新确认
+                </span>
+              )}
+            </div>
 
             {sortedExperiences.length > 0 ? (
               <div className="space-y-4">
@@ -264,6 +308,10 @@ export default function BenchDetail() {
               档案信息
             </h3>
             <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-ink-light">长椅编号</span>
+                <span className="text-deep-brown font-mono">{bench.code}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-ink-light">创建时间</span>
                 <span className="text-deep-brown">

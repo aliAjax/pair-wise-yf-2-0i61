@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, MapPin, Star, Crown, Medal, Award } from 'lucide-react';
+import { Trophy, MapPin, Star, Crown, Medal, Award, Clock } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
 import { MATERIAL_LABELS, SHADE_LABELS } from '@/types';
-import type { Bench } from '@/types';
 
 export default function RankingPage() {
   const { benches, initialize, initialized } = useBenchStore();
@@ -16,7 +15,11 @@ export default function RankingPage() {
     }
   }, [initialized, initialize]);
 
-  const rankedBenches = [...benches]
+  // 材质 / 遮阴变更后分时段体验尚未重新确认的长椅，暂不进排行
+  const eligibleBenches = benches.filter((bench) => bench.experiencesConfirmed);
+  const excludedBenches = benches.filter((bench) => !bench.experiencesConfirmed);
+
+  const rankedBenches = [...eligibleBenches]
     .sort((a, b) => calculateComfortScore(b) - calculateComfortScore(a))
     .map((bench, index) => ({ bench, rank: index + 1 }));
 
@@ -119,6 +122,33 @@ export default function RankingPage() {
           );
         })}
       </div>
+
+      {excludedBenches.length > 0 && (
+        <div className="mt-4 paper-texture rounded-xl shadow-paper p-4 border border-ochre/20 bg-ochre/5">
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-ochre flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-serif text-sm font-semibold text-deep-brown mb-1">
+                {excludedBenches.length} 张长椅暂不参与排行
+              </h3>
+              <p className="text-xs text-ink-light mb-2">
+                材质或遮阴发生了变化，分时段体验需要重新确认后才会计入排行。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {excludedBenches.map((bench) => (
+                  <button
+                    key={bench.id}
+                    onClick={() => navigate(`/bench/${bench.id}`)}
+                    className="text-xs px-2 py-1 bg-white/70 hover:bg-white text-deep-brown rounded-md transition-colors"
+                  >
+                    {bench.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {rankedBenches.length === 0 && (
         <div className="paper-texture rounded-xl shadow-paper p-12 text-center">
